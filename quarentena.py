@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import shutil
 import time
@@ -12,6 +13,15 @@ QUARENTENA = Path.home() / "Quarentena"
 IGNORAR = {".crdownload", ".part", ".tmp", ".download"}
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s", datefmt="%H:%M:%S")
+
+
+def calcular_sha256(caminho: Path) -> str:
+    """Calcula o hash SHA-256 lendo o arquivo em blocos (funciona com arquivos grandes)."""
+    sha256 = hashlib.sha256()
+    with open(caminho, "rb") as arquivo:
+        for bloco in iter(lambda: arquivo.read(1024 * 1024), b""):
+            sha256.update(bloco)
+    return sha256.hexdigest()
 
 
 def download_terminou(caminho: Path, tentativas: int = 30, intervalo: float = 1.0) -> bool:
@@ -63,7 +73,12 @@ class MonitorDownloads(FileSystemEventHandler):
             logging.warning(f"Erro ao mover {caminho.name}: {erro}")
             return
 
-        logging.info(f"Em quarentena: {caminho.name}")
+        logging.info(f"Em quarentena: {destino.name}")
+
+        try:
+            logging.info(f"  SHA-256: {calcular_sha256(destino)}")
+        except OSError as erro:
+            logging.warning(f"  Não consegui calcular o hash: {erro}")
 
 
 if __name__ == "__main__":

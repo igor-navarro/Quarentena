@@ -2,7 +2,7 @@ import argparse
 import shutil
 from pathlib import Path
 
-from quarentena import DOWNLOADS, QUARENTENA, destino_unico
+from quarentena import DOWNLOADS, QUARENTENA, calcular_sha256, destino_unico
 
 # fora da raiz de Downloads, para o monitor não pegar o arquivo de novo
 LIBERADOS = DOWNLOADS / "Liberados"
@@ -31,6 +31,10 @@ def listar() -> None:
     for i, arquivo in enumerate(arquivos, start=1):
         kb = arquivo.stat().st_size / 1024
         print(f"{i}. {arquivo.name} ({kb:.1f} KB)")
+        try:
+            print(f"   SHA-256: {calcular_sha256(arquivo)}")
+        except OSError as erro:
+            print(f"   Não consegui calcular o hash: {erro}")
 
 
 def liberar(nome: str) -> None:
@@ -59,7 +63,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Gerencia a quarentena de downloads")
     sub = parser.add_subparsers(dest="comando", required=True)
 
-    sub.add_parser("listar", help="lista os arquivos em quarentena")
+    sub.add_parser("listar", help="lista os arquivos em quarentena com o hash SHA-256")
 
     p_liberar = sub.add_parser("liberar", help="move o arquivo para Downloads\\Liberados")
     p_liberar.add_argument("nome", help="nome do arquivo (use aspas se tiver espaços)")
