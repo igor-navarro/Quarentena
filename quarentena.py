@@ -9,10 +9,23 @@ from watchdog.observers import Observer
 
 DOWNLOADS = Path.home() / "Downloads"
 QUARENTENA = Path.home() / "Quarentena"
+# o log fica na pasta do projeto, fora da quarentena (senão apareceria no "listar")
+LOG = Path(__file__).parent / "quarentena.log"
 # extensões de arquivos que ainda estão sendo baixados
 IGNORAR = {".crdownload", ".part", ".tmp", ".download"}
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(message)s", datefmt="%H:%M:%S")
+
+def configurar_log() -> None:
+    """Mostra as mensagens no terminal e grava todas no quarentena.log."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(LOG, encoding="utf-8", delay=True),
+        ],
+    )
 
 
 def calcular_sha256(caminho: Path) -> str:
@@ -73,25 +86,29 @@ class MonitorDownloads(FileSystemEventHandler):
             logging.warning(f"Erro ao mover {caminho.name}: {erro}")
             return
 
-        logging.info(f"Em quarentena: {destino.name}")
-
         try:
-            logging.info(f"  SHA-256: {calcular_sha256(destino)}")
+            tamanho = destino.stat().st_size
+            hash_arquivo = calcular_sha256(destino)
         except OSError as erro:
-            logging.warning(f"  Não consegui calcular o hash: {erro}")
+            logging.warning(f"Em quarentena: {destino.name} | não consegui calcular o hash: {erro}")
+            return
+
+        logging.info(f"Em quarentena: {destino.name} | {tamanho} bytes | SHA-256: {hash_arquivo}")
 
 
 if __name__ == "__main__":
+    configurar_log()
     QUARENTENA.mkdir(exist_ok=True)
 
     observer = Observer()
     observer.schedule(MonitorDownloads(), str(DOWNLOADS), recursive=False)
     observer.start()
-    logging.info(f"Monitorando {DOWNLOADS} (Ctrl+C para parar)")
+    logging.info(f"Monitor iniciado em {DOWNLOADS} (Ctrl+C para parar)")
 
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
         observer.stop()
+        logging.info("Monitor encerrado")
     observer.join()

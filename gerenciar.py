@@ -1,8 +1,9 @@
 import argparse
+import logging
 import shutil
 from pathlib import Path
 
-from quarentena import DOWNLOADS, QUARENTENA, calcular_sha256, destino_unico
+from quarentena import DOWNLOADS, QUARENTENA, calcular_sha256, configurar_log, destino_unico
 
 # fora da raiz de Downloads, para o monitor não pegar o arquivo de novo
 LIBERADOS = DOWNLOADS / "Liberados"
@@ -44,7 +45,7 @@ def liberar(nome: str) -> None:
     LIBERADOS.mkdir(exist_ok=True)
     destino = destino_unico(LIBERADOS / arquivo.name)
     shutil.move(str(arquivo), str(destino))
-    print(f"Liberado: {destino}")
+    logging.info(f"Liberado: {arquivo.name} -> {destino}")
 
 
 def deletar(nome: str) -> None:
@@ -56,7 +57,7 @@ def deletar(nome: str) -> None:
         print("Cancelado.")
         return
     arquivo.unlink()
-    print(f"Apagado: {arquivo.name}")
+    logging.info(f"Apagado: {arquivo.name}")
 
 
 def main() -> None:
@@ -72,6 +73,7 @@ def main() -> None:
     p_deletar.add_argument("nome", help="nome do arquivo (use aspas se tiver espaços)")
 
     args = parser.parse_args()
+    configurar_log()
 
     if args.comando == "listar":
         listar()
